@@ -2,6 +2,8 @@
 from balance.balance import Balance
 from balance.balance_observer import LowBalanceAlertObserver
 from balance.balance_observer import PrintObserver
+from command.apply_transaction_command import ApplyTransactionCommand
+from command.command_manager import CommandManager
 from transaction.transaction import Transaction
 from transaction.transaction_category import TransactionCategory
 from transaction.transaction_adapter import TransactionAdapter
@@ -10,8 +12,11 @@ from transaction.external_income_transaction import ExternalFreelanceIncome
 
 def main():
     print("Adding transactions...")
-   
-    # TODO: Create balance and add observers
+
+    # Create balance and add observers
+    balance = Balance.get_instance()
+    balance.register_observer(PrintObserver())
+    balance.register_observer(LowBalanceAlertObserver(threshold=100))
 
     # Create standard transactions
     transactions = [
@@ -28,7 +33,17 @@ def main():
 
     all_transactions = transactions + [adapted_transaction]
 
-    # TODO: Apply all transactions to balance
+    # Apply all transactions to balance (as commands, so they can be undone)
+    manager = CommandManager()
+    for transaction in all_transactions:
+        manager.execute_command(ApplyTransactionCommand(balance, transaction))
+    print(balance.summary())
+
+    # Undo the last transaction (Command pattern)
+    print("\nUndoing the last transaction...")
+    manager.undo_last()
+    print(balance.summary())
+
 
 if __name__ == "__main__":
     main()
